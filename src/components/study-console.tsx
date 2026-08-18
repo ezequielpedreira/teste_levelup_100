@@ -8,6 +8,7 @@ import { studyCategories } from "@/lib/brand";
 import { calculateEffectiveSeconds, calculateSessionXp } from "@/lib/game";
 import { formatDuration } from "@/lib/utils";
 import { getCheckinButtonState } from "@/lib/checkin";
+import { commitCheckinAndSynchronize } from "@/lib/checkin-flow";
 import { createClient } from "@/lib/supabase/client";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 
@@ -132,16 +133,18 @@ export function StudyConsole({ initialStatus, dailyGoalMinutes }: { initialStatu
     };
     try {
       const supabase = createClient();
-      const { data: result, error } = await supabase.rpc("create_checkin", {
-        p_title: values.title,
-        p_planned_content: values.content,
-        p_planned_objective: values.objective,
-        p_category_name: values.category,
-        p_planned_minutes: values.plannedMinutes,
-        p_notes: String(data.get("notes") ?? "").trim() || null,
-      });
-      if (error) throw error;
-      const response = result as CreateCheckinResult;
+      const response = await commitCheckinAndSynchronize(async () => {
+        const { data: result, error } = await supabase.rpc("create_checkin", {
+          p_title: values.title,
+          p_planned_content: values.content,
+          p_planned_objective: values.objective,
+          p_category_name: values.category,
+          p_planned_minutes: values.plannedMinutes,
+          p_notes: String(data.get("notes") ?? "").trim() || null,
+        });
+        if (error) throw error;
+        return result as CreateCheckinResult;
+      }, loadCurrentState);
       setDailyStatus({
         checked_in: true,
         checkin_date: response.checkin_date,
@@ -149,8 +152,21 @@ export function StudyConsole({ initialStatus, dailyGoalMinutes }: { initialStatu
         next_checkin_at: response.next_checkin_at,
         timezone: response.timezone,
       });
+      if (response.created && response.session_id) {
+        setSession({
+          id: response.session_id,
+          title: values.title,
+          content: values.content,
+          objective: values.objective,
+          category: values.category || "Estudo",
+          plannedMinutes: values.plannedMinutes,
+          startedAt: response.checked_in_at,
+          pausedAt: null,
+          accumulatedPauseSeconds: 0,
+          status: "active",
+        });
+      }
       setModal(null);
-      await loadCurrentState();
       if (response.created) toast.success("Check-in feito! +10 XP. Hora de focar.");
       else toast.info("Check-in de hoje já foi concluído.");
       router.refresh();

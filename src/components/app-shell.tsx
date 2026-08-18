@@ -6,6 +6,7 @@ import { Award, Flame, Home, LogOut, Map, Medal, Settings, TimerReset, Trophy } 
 import { BrandMark } from "./brand-mark";
 import { ThemeToggle } from "./theme-toggle";
 import { FeedbackWidget } from "./feedback-widget";
+import { ProductTour } from "./product-tour";
 import { cn } from "@/lib/utils";
 import { logout } from "@/app/actions/auth";
 
@@ -29,6 +30,7 @@ type Viewer = {
   streak: number;
   serverTime: string;
   timezone: string;
+  productTourCompleted: boolean;
 };
 
 export function AppShell({ children, viewer }: { children: React.ReactNode; viewer: Viewer }) {
@@ -41,12 +43,12 @@ export function AppShell({ children, viewer }: { children: React.ReactNode; view
   const sidebar = (
     <>
       <div className="px-5 py-5"><BrandMark /></div>
-      <nav className="mt-3 space-y-1 px-3" aria-label="Navegação principal">
+      <nav className="mt-3 space-y-1 px-3" aria-label="Navegação principal" data-tour="nav">
         {nav.map((item) => {
           const Icon = item.icon;
           const active = item.href === "/app" ? path === item.href : path.startsWith(item.href);
           return (
-            <Link key={item.href} href={item.href} prefetch={true} aria-current={active ? "page" : undefined}
+            <Link key={item.href} href={item.href} prefetch={true} aria-current={active ? "page" : undefined} data-tour={item.href === "/app" ? "home" : item.href.includes("sessoes") ? "sessions" : item.href.includes("ranking") ? "ranking" : item.href.includes("conquistas") ? "achievements" : undefined}
               className={cn("nav-link", active && "nav-link-active")}>
               <Icon size={20} aria-hidden="true" />{item.label}
             </Link>
@@ -89,10 +91,11 @@ export function AppShell({ children, viewer }: { children: React.ReactNode; view
         {nav.map((item) => {
           const Icon = item.icon;
           const active = item.href === "/app" ? path === item.href : path.startsWith(item.href);
-          return <Link key={item.href} href={item.href} prefetch={true} aria-current={active ? "page" : undefined} className={cn("mobile-link", active && "text-[#6c4cff]")}><Icon size={19} />{item.label.replace("Minha ", "")}</Link>;
+          return <Link key={item.href} href={item.href} prefetch={true} aria-current={active ? "page" : undefined} data-tour={item.href === "/app" ? "home" : item.href.includes("sessoes") ? "sessions" : item.href.includes("ranking") ? "ranking" : item.href.includes("conquistas") ? "achievements" : undefined} className={cn("mobile-link", active && "text-[#6c4cff]")}><Icon size={19} />{item.label.replace("Minha ", "")}</Link>;
         })}
       </nav>
       <FeedbackWidget />
+      <ProductTour open={!viewer.productTourCompleted} />
     </div>
   );
 }

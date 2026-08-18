@@ -42,6 +42,22 @@ button,a { -webkit-tap-highlight-color:transparent; }
 .ranking-streak { color:var(--ink); }.ranking-streak svg { color:#e65f36; }
 .ranking-time { color:var(--ink); }.ranking-time svg { color:#19785a; }
 .ranking-current-row { background:var(--lavender); }
+.podium-card { border-top:4px solid var(--podium-color); background:linear-gradient(180deg,var(--podium-soft),var(--surface) 45%); }
+.podium-step { box-shadow:inset 0 4px rgba(255,255,255,.3); }
+.linkedin-button { display:grid; width:38px; height:38px; place-items:center; border-radius:10px; color:#fff; background:#0a66c2; transition:transform .16s,box-shadow .16s; }
+.linkedin-button:hover { transform:translateY(-2px); box-shadow:0 4px 0 #074a8c; }
+.tour-spotlight { z-index:101; pointer-events:none; border:3px solid #ffc43d; background:transparent; box-shadow:0 0 0 9999px rgba(17,16,29,.72),0 0 0 7px rgba(255,196,61,.2); transition:all .28s ease; }
+.tour-panel { animation:tour-enter .34s cubic-bezier(.2,.8,.2,1) both; }
+.achievement-card { transition:transform .2s,box-shadow .2s,filter .2s; }
+.achievement-card:hover { transform:translateY(-3px); }
+.achievement-unlocked { border-color:color-mix(in srgb,var(--badge-color) 42%,var(--line)); background:linear-gradient(145deg,var(--badge-soft),var(--surface) 48%); }
+.achievement-locked { filter:saturate(.45); opacity:.72; }
+.achievement-badge { color:var(--badge-color); background:var(--badge-soft); }
+.achievement-locked .achievement-badge { color:var(--muted); background:var(--surface-soft); }
+.achievement-celebrating { animation:achievement-pop .75s cubic-bezier(.2,.9,.3,1) both; box-shadow:0 0 0 4px var(--badge-soft),0 14px 32px color-mix(in srgb,var(--badge-color) 24%,transparent); }
+.achievement-sparkles { position:absolute; inset:0; pointer-events:none; }
+.achievement-sparkles svg { position:absolute; color:#ffc43d; animation:sparkle-fly 1.3s ease-out infinite; }
+.achievement-sparkles svg:nth-child(1){left:12%;top:18%}.achievement-sparkles svg:nth-child(2){right:12%;top:12%;animation-delay:.2s}.achievement-sparkles svg:nth-child(3){right:22%;bottom:15%;animation-delay:.4s}
 .scrollbar-none { scrollbar-width:none; }.scrollbar-none::-webkit-scrollbar { display:none; }
 @keyframes bob { 0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-7px) rotate(2deg)} }
 @keyframes pulse-ring { 0%{box-shadow:0 0 0 0 rgba(108,76,255,.24)}70%{box-shadow:0 0 0 14px rgba(108,76,255,0)}100%{box-shadow:0 0 0 0 rgba(108,76,255,0)} }
@@ -50,6 +66,9 @@ button,a { -webkit-tap-highlight-color:transparent; }
 @keyframes lego-car-bounce { 0%,100%{transform:translateY(0) rotate(0)} 35%{transform:translateY(-2px) rotate(-1deg)} 70%{transform:translateY(1px) rotate(1deg)} }
 @keyframes lego-wheel-spin { to{transform:rotate(360deg)} }
 @keyframes lego-flag-wave { 0%,100%{transform:skewY(0) rotate(0)} 50%{transform:skewY(-5deg) rotate(-2deg)} }
+@keyframes tour-enter { from{opacity:0;transform:translateY(22px) scale(.98)} to{opacity:1;transform:none} }
+@keyframes achievement-pop { 0%{transform:scale(.96)}45%{transform:scale(1.035) rotate(.5deg)}100%{transform:none} }
+@keyframes sparkle-fly { 0%{opacity:0;transform:translateY(8px) scale(.5) rotate(0)}45%{opacity:1}100%{opacity:0;transform:translateY(-28px) scale(1.1) rotate(35deg)} }
 .journey-track { background:#57506f; box-shadow:inset 0 2px 3px rgba(0,0,0,.22); }
 .journey-track::after { content:""; position:absolute; inset:4px 0 auto; height:2px; background:repeating-linear-gradient(90deg,rgba(255,255,255,.45) 0 13px,transparent 13px 23px); }
 .journey-racer { z-index:2; width:50px; animation:drive-progress .95s cubic-bezier(.2,.85,.35,1) both; transition:left .7s cubic-bezier(.2,.85,.35,1); }

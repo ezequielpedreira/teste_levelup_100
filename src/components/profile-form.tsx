@@ -121,7 +121,7 @@ export function ProfileForm({ profile, email }: { profile: Profile; email: strin
 
       <aside className="space-y-5">
         <section className="card p-5"><h2 className="font-display flex items-center gap-3 text-lg font-black">{theme === "light" ? <Sun className="text-[#d49400]" /> : <Moon className="text-[#6c4cff]" />}Aparência</h2><div className="mt-4 grid grid-cols-2 gap-2"><button onClick={() => setTheme("light")} className={theme === "light" ? "btn-primary" : "btn-secondary"} type="button" aria-pressed={theme === "light"}><Sun size={17} />Claro</button><button onClick={() => setTheme("dark")} className={theme === "dark" ? "btn-primary" : "btn-secondary"} type="button" aria-pressed={theme === "dark"}><Moon size={17} />Escuro</button></div></section>
-        <section className="card p-5"><h2 className="font-display flex items-center gap-3 text-lg font-black"><ShieldCheck className="text-[#27ae76]" />Privacidade</h2><p className="mt-3 text-sm leading-6 text-[var(--muted)]">Seu e-mail, LinkedIn, objetivo e conteúdo das sessões não aparecem no ranking.</p></section>
+        <section className="card p-5"><h2 className="font-display flex items-center gap-3 text-lg font-black"><ShieldCheck className="text-[#27ae76]" />Privacidade</h2><p className="mt-3 text-sm leading-6 text-[var(--muted)]">Seu e-mail, objetivo e conteúdo das sessões nunca aparecem no ranking. Foto e LinkedIn são exibidos somente quando você participa de forma identificada.</p></section>
         <section className="card p-5"><h2 className="font-display flex items-center gap-3 text-lg font-black"><LockKeyhole className="text-[#6c4cff]" />Segurança</h2><Link className="btn-secondary mt-4 w-full" href="/recuperar-senha">Alterar senha</Link></section>
       </aside>
     </div>

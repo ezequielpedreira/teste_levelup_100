@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BookOpen, Clock3, Flame, Medal, Target, Trophy, Zap } from "lucide-react";
+import { ArrowRight, BookOpen, Clock3, Crown, Flame, Medal, Target, Trophy, Zap } from "lucide-react";
 import { StudyConsole } from "@/components/study-console";
 import { getDashboardData } from "@/lib/app-data";
 import { getLevel } from "@/lib/game";
@@ -39,9 +39,9 @@ export default async function DashboardPage() {
 
       <section className="mt-7 grid gap-6 xl:grid-cols-[1fr_340px]">
         <StudyConsole initialStatus={data.checkinStatus} dailyGoalMinutes={data.profile.daily_goal_minutes} />
-        <article className="card p-5">
+        <article className="card p-5" data-tour="daily-mission">
           <div className="flex items-center justify-between"><p className="eyebrow">MISSÃO DO DIA</p><Target size={20} className="text-[#6c4cff]" /></div>
-          <h2 className="font-display mt-3 text-xl font-black">Complete {data.profile.daily_goal_minutes} minutos</h2>
+          <h2 className="font-display mt-3 text-xl font-black">Complete {formatDailyGoal(data.profile.daily_goal_minutes)}</h2>
           <p className="mt-2 text-sm text-[var(--muted)]">Hoje: <strong className="text-[var(--ink)]">{formatDuration(data.stats.todaySeconds)}</strong></p>
           <div className="mt-4 h-2 overflow-hidden rounded-full bg-[#eeeaff]"><div className="h-full bg-[#27ae76]" style={{ width: `${goalProgress}%` }} /></div>
           <p className="mt-3 text-xs font-bold text-[var(--muted)]">{goalProgress}% da meta diária</p>
@@ -62,17 +62,24 @@ export default async function DashboardPage() {
 
 function RankingPosition({ position }: { position: number }) {
   const medals = {
-    1: { label: "ouro", className: "bg-[#fff4d3] text-[#b77900]" },
-    2: { label: "prata", className: "bg-[#eef1f5] text-[#697386]" },
-    3: { label: "bronze", className: "bg-[#f9e5d5] text-[#a95723]" },
+    1: { label: "ouro", className: "bg-[#fff4c2] text-[#b77900] shadow-[0_3px_0_#e6b628]", icon: Crown },
+    2: { label: "prata", className: "bg-[#eef1f5] text-[#697386] shadow-[0_3px_0_#c2c8d0]", icon: Medal },
+    3: { label: "bronze", className: "bg-[#f9e5d5] text-[#a95723] shadow-[0_3px_0_#d6a17e]", icon: Trophy },
   } as const;
   const medal = medals[position as keyof typeof medals];
 
   if (medal) {
-    return <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${medal.className}`} title={`Medalha de ${medal.label}`}><Medal size={19} fill="currentColor" aria-hidden="true" /><span className="sr-only">{position}º lugar, medalha de {medal.label}</span></span>;
+    const Icon = medal.icon;
+    return <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${medal.className}`} title={`Medalha de ${medal.label}`}><Icon size={19} fill="currentColor" aria-hidden="true" /><span className="sr-only">{position}º lugar, medalha de {medal.label}</span></span>;
   }
 
   return <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#eeeaff] text-xs font-black text-[#5b3ee4]">{position}</span>;
+}
+
+function formatDailyGoal(minutes: number) {
+  if (minutes === 60) return "1 hora";
+  if (minutes > 60 && minutes % 60 === 0) return `${minutes / 60} horas`;
+  return `${minutes} minutos`;
 }
 
 function ChallengeCard({ day, totalDays, completedDays }: { day: number; totalDays: number; completedDays: number }) {

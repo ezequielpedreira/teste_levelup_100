@@ -24,6 +24,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         streak: data.stats.streak,
         serverTime: data.checkinStatus.server_time,
         timezone: data.profile.timezone,
+        productTourCompleted: data.profile.product_tour_completed,
       }}
     >
       {children}

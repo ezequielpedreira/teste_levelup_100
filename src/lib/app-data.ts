@@ -18,6 +18,7 @@ export type Profile = {
   priority_subject: string | null;
   ranking_visibility: string;
   onboarding_completed: boolean;
+  product_tour_completed: boolean;
   created_at: string;
 };
 
@@ -70,6 +71,7 @@ export type RankingEntry = {
   display_name: string;
   avatar_path: string | null;
   avatar_url: string | null;
+  linkedin_handle: string | null;
   total_xp: number;
   total_seconds: number;
   current_streak: number;
@@ -180,7 +182,7 @@ export const getBaseData = cache(async (): Promise<BaseData> => {
   const [profileResult, statusResult] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id,full_name,display_name,avatar_url,linkedin_handle,bio,timezone,daily_goal_minutes,main_study_goal,priority_subject,ranking_visibility,onboarding_completed,created_at")
+      .select("id,full_name,display_name,avatar_url,linkedin_handle,bio,timezone,daily_goal_minutes,main_study_goal,priority_subject,ranking_visibility,onboarding_completed,product_tour_completed,created_at")
       .eq("id", authData.user.id)
       .single(),
     supabase.rpc("get_daily_checkin_status"),
