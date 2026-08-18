@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { themeColor: "#6c4cff", colorScheme: "light dark" };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const themeScript = `(function(){try{var t=localStorage.getItem('levelup100-theme')==='dark'?'dark':'light';document.documentElement.classList.toggle('dark',t==='dark');document.documentElement.style.colorScheme=t}catch(e){document.documentElement.style.colorScheme='light'}})()`;
   return (
     <html lang="pt-BR" data-scroll-behavior="smooth" suppressHydrationWarning>
