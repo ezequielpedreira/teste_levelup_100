@@ -200,26 +200,35 @@ export function StudyConsole({ initialStatus, dailyGoalMinutes }: { initialStatu
     let gained = calculateSessionXp(seconds, session.plannedMinutes);
     try {
       const supabase = createClient();
-      const { data: result, error } = await supabase.rpc("finish_study_session", {
-        p_session_id: session.id,
-        p_actual_content: String(data.get("actualContent") ?? "").trim(),
-        p_goal_achieved: data.get("goalAchieved") === "yes",
-        p_learning_summary: String(data.get("learning") ?? "").trim(),
-        p_difficulty: String(data.get("difficulty") ?? "").trim() || null,
-        p_rating: Number(data.get("rating")) || null,
-        p_checkout_notes: null,
-      });
-      if (error) throw error;
-      gained = Number((result as { xp_earned?: number })?.xp_earned ?? gained);
+      const result = await commitCheckinAndSynchronize(async () => {
+        const { data: response, error } = await supabase.rpc("finish_study_session", {
+          p_session_id: session.id,
+          p_actual_content: String(data.get("actualContent") ?? "").trim(),
+          p_goal_achieved: data.get("goalAchieved") === "yes",
+          p_learning_summary: String(data.get("learning") ?? "").trim(),
+          p_difficulty: String(data.get("difficulty") ?? "").trim() || null,
+          p_rating: Number(data.get("rating")) || null,
+          p_checkout_notes: null,
+        });
+        if (error) throw error;
+        return response as { xp_earned?: number } | null;
+      }, loadCurrentState);
+      gained = Number(result?.xp_earned ?? gained);
       setXp(gained);
       setSession(null);
       setModal("done");
-      router.refresh();
+      toast.success("Sessão concluída e progresso salvo!");
     } catch {
       toast.error("Não foi possível concluir a sessão. Seus dados continuam preenchidos.");
     } finally {
       setPending(false);
     }
+  }
+
+  function closeCheckoutConfirmation() {
+    setModal(null);
+    // Aguarda a confirmação desmontar antes de mesclar o novo payload RSC.
+    window.requestAnimationFrame(() => router.refresh());
   }
 
   if (!session) {
@@ -243,7 +252,7 @@ export function StudyConsole({ initialStatus, dailyGoalMinutes }: { initialStatu
           <span className="mt-4 text-xs font-bold text-[var(--muted)]">Meta de hoje: {dailyGoalMinutes} minutos</span>
         </section>
         {modal === "checkin" && <CheckinModal close={() => setModal(null)} submit={start} pending={pending} dailyGoalMinutes={dailyGoalMinutes} />}
-        {modal === "done" && <DoneModal xp={xp} close={() => setModal(null)} />}
+        {modal === "done" && <DoneModal xp={xp} close={closeCheckoutConfirmation} />}
       </>
     );
   }
@@ -277,8 +286,8 @@ function CheckinModal({ close, submit, pending, dailyGoalMinutes }: { close: () 
   return <Modal close={close} title="CHECK-IN"><h2 className="font-display mt-3 text-3xl font-black">Qual é a missão de agora?</h2><p className="mt-2 text-[var(--muted)]">Clareza primeiro, cronômetro depois.</p><form className="mt-7 space-y-4" onSubmit={(event) => { event.preventDefault(); submit(event.currentTarget); }}><Field label="Título da sessão" name="title" placeholder="Ex.: Modelagem dimensional" maxLength={120} /><Field label="O que você vai estudar?" name="content" placeholder="Conteúdo, capítulo ou tarefa" maxLength={500} /><Field label="Objetivo desta sessão" name="objective" placeholder="O que estará pronto ao terminar?" maxLength={500} /><div className="grid gap-4 sm:grid-cols-2"><div><label className="label" htmlFor="category">Categoria</label><select className="input" id="category" name="category">{studyCategories.map((category) => <option key={category}>{category}</option>)}</select></div><div><label className="label" htmlFor="minutes">Meta em minutos</label><input className="input" id="minutes" name="minutes" type="number" min={1} max={600} defaultValue={dailyGoalMinutes} required /></div></div><div><label className="label" htmlFor="notes">Observação <span className="font-normal text-[var(--muted)]">(opcional)</span></label><textarea className="input min-h-20 resize-none" id="notes" name="notes" maxLength={1000} /></div><button className="btn-primary mt-2 w-full" disabled={pending}>{pending ? "Registrando..." : <><Play size={18} fill="currentColor" />Fazer check-in</>}</button></form></Modal>;
 }
 
-function CheckoutModal({ session, seconds, close, submit, pending }: { session: Session; seconds: number; close: () => void; submit: (form: HTMLFormElement) => void; pending: boolean }) {
-  return <Modal close={close} title="CHECK-OUT"><div className="mt-3 flex flex-wrap items-end justify-between gap-3"><div><h2 className="font-display text-3xl font-black">Missão concluída?</h2><p className="mt-2 text-[var(--muted)]">Registre o que realmente aconteceu.</p></div><div className="rounded-xl bg-[#e1f7ed] px-4 py-3 text-right text-[#146c49]"><span className="block text-xs font-bold">TEMPO REGISTRADO</span><strong className="font-display text-xl">{formatDuration(seconds, true)}</strong></div></div><form className="mt-7 space-y-4" onSubmit={(event) => { event.preventDefault(); submit(event.currentTarget); }}><Field label="O que você estudou de fato?" name="actualContent" placeholder={session.content} maxLength={1000} /><fieldset><legend className="label">Alcançou o objetivo?</legend><div className="grid grid-cols-2 gap-2"><label className="flex items-center gap-2 rounded-xl border border-[var(--line)] p-3 font-bold"><input type="radio" name="goalAchieved" value="yes" defaultChecked />Sim</label><label className="flex items-center gap-2 rounded-xl border border-[var(--line)] p-3 font-bold"><input type="radio" name="goalAchieved" value="no" />Parcialmente</label></div></fieldset><div><label className="label" htmlFor="learning">Principal aprendizado</label><textarea className="input min-h-24 resize-none" id="learning" name="learning" required maxLength={1000} /></div><div className="grid gap-4 sm:grid-cols-2"><div><label className="label" htmlFor="difficulty">Dificuldade encontrada</label><input className="input" id="difficulty" name="difficulty" maxLength={500} /></div><div><label className="label" htmlFor="rating">Nota da sessão</label><select className="input" id="rating" name="rating" defaultValue="5">{[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating}</option>)}</select></div></div><button className="btn-primary w-full bg-[#27ae76] shadow-[0_4px_0_#187a51]" disabled={pending}>{pending ? "Salvando..." : <><CheckCircle2 size={19} />Concluir check-out</>}</button></form></Modal>;
+function CheckoutModal({ session, seconds, close, submit, pending }: { session: Session; seconds: number; close: () => void; submit: (form: HTMLFormElement) => Promise<void>; pending: boolean }) {
+  return <Modal close={close} title="CHECK-OUT"><div className="mt-3 flex flex-wrap items-end justify-between gap-3"><div><h2 className="font-display text-3xl font-black">Missão concluída?</h2><p className="mt-2 text-[var(--muted)]">Registre o que realmente aconteceu.</p></div><div className="rounded-xl bg-[#e1f7ed] px-4 py-3 text-right text-[#146c49]"><span className="block text-xs font-bold">TEMPO REGISTRADO</span><strong className="font-display text-xl">{formatDuration(seconds, true)}</strong></div></div><form className="mt-7 space-y-4" onSubmit={(event) => { event.preventDefault(); void submit(event.currentTarget); }}><Field label="O que você estudou de fato?" name="actualContent" placeholder={session.content} maxLength={1000} /><fieldset><legend className="label">Alcançou o objetivo?</legend><div className="grid grid-cols-2 gap-2"><label className="flex items-center gap-2 rounded-xl border border-[var(--line)] p-3 font-bold"><input type="radio" name="goalAchieved" value="yes" defaultChecked />Sim</label><label className="flex items-center gap-2 rounded-xl border border-[var(--line)] p-3 font-bold"><input type="radio" name="goalAchieved" value="no" />Parcialmente</label></div></fieldset><div><label className="label" htmlFor="learning">Principal aprendizado</label><textarea className="input min-h-24 resize-none" id="learning" name="learning" required maxLength={1000} /></div><div className="grid gap-4 sm:grid-cols-2"><div><label className="label" htmlFor="difficulty">Dificuldade encontrada</label><input className="input" id="difficulty" name="difficulty" maxLength={500} /></div><div><label className="label" htmlFor="rating">Nota da sessão</label><select className="input" id="rating" name="rating" defaultValue="5">{[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating}</option>)}</select></div></div><button className="btn-primary w-full bg-[#27ae76] shadow-[0_4px_0_#187a51]" disabled={pending}>{pending ? "Salvando..." : <><CheckCircle2 size={19} />Concluir check-out</>}</button></form></Modal>;
 }
 
 function DoneModal({ xp, close }: { xp: number; close: () => void }) {

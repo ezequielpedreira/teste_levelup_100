@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowRight, BookOpen, Clock3, Crown, Flame, Medal, Target, Trophy, Zap } from "lucide-react";
+import { ArrowRight, BookOpen, Clock3, Flame, Target, Trophy, Zap } from "lucide-react";
+import { PiCrownSimpleFill, PiMedalFill } from "react-icons/pi";
 import { StudyConsole } from "@/components/study-console";
 import { getDashboardData } from "@/lib/app-data";
 import { getLevel } from "@/lib/game";
@@ -62,15 +63,15 @@ export default async function DashboardPage() {
 
 function RankingPosition({ position }: { position: number }) {
   const medals = {
-    1: { label: "ouro", className: "bg-[#fff4c2] text-[#b77900] shadow-[0_3px_0_#e6b628]", icon: Crown },
-    2: { label: "prata", className: "bg-[#eef1f5] text-[#697386] shadow-[0_3px_0_#c2c8d0]", icon: Medal },
-    3: { label: "bronze", className: "bg-[#f9e5d5] text-[#a95723] shadow-[0_3px_0_#d6a17e]", icon: Trophy },
+    1: { label: "ouro", tone: "gold", icon: PiCrownSimpleFill },
+    2: { label: "prata", tone: "silver", icon: PiMedalFill },
+    3: { label: "bronze", tone: "bronze", icon: PiMedalFill },
   } as const;
   const medal = medals[position as keyof typeof medals];
 
   if (medal) {
     const Icon = medal.icon;
-    return <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${medal.className}`} title={`Medalha de ${medal.label}`}><Icon size={19} fill="currentColor" aria-hidden="true" /><span className="sr-only">{position}º lugar, medalha de {medal.label}</span></span>;
+    return <span className={`ranking-position ranking-position-${medal.tone}`} title={`Medalha de ${medal.label}`}><Icon size={22} aria-hidden="true" /><span className="ranking-position-number" aria-hidden="true">{position}</span><span className="sr-only">{position}º lugar, medalha de {medal.label}</span></span>;
   }
 
   return <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#eeeaff] text-xs font-black text-[#5b3ee4]">{position}</span>;

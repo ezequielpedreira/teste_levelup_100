@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Clock3, Flame, Medal, Trophy, Zap } from "lucide-react";
+import { Clock3, Flame, Trophy, Zap } from "lucide-react";
 import { FaLinkedinIn } from "react-icons/fa6";
+import { PiCrownSimpleFill, PiMedalFill } from "react-icons/pi";
 import type { RankingEntry } from "@/lib/app-data";
 import { formatDuration, initials } from "@/lib/utils";
 
@@ -10,9 +11,9 @@ const filters = ["XP", "Tempo total", "Maior sequência", "Mais check-ins"] as c
 type Filter = (typeof filters)[number];
 
 const podiumStyle = {
-  1: { label: "OURO", ring: "#f0b90b", soft: "#fff4c2", height: "sm:min-h-72", icon: Trophy },
-  2: { label: "PRATA", ring: "#98a2b3", soft: "#eef1f5", height: "sm:min-h-60", icon: Medal },
-  3: { label: "BRONZE", ring: "#b86d3a", soft: "#f8e4d5", height: "sm:min-h-52", icon: Medal },
+  1: { label: "OURO", icon: PiCrownSimpleFill },
+  2: { label: "PRATA", icon: PiMedalFill },
+  3: { label: "BRONZE", icon: PiMedalFill },
 } as const;
 
 export function RankingBoard({ entries, currentUserId }: { entries: RankingEntry[]; currentUserId: string }) {
@@ -32,16 +33,21 @@ export function RankingBoard({ entries, currentUserId }: { entries: RankingEntry
     </div>
 
     {rows.length ? <>
-      <section className="mt-6 grid items-end gap-3 sm:grid-cols-3" aria-label="Pódio do ranking">
+      <section className="podium-stage mt-6" aria-label="Pódio do ranking">
         {podium.map(({ entry, position }) => {
           const style = podiumStyle[position];
           const PositionIcon = style.icon;
-          return <article key={entry.user_id} className={`podium-card card relative flex flex-col items-center justify-end overflow-hidden px-4 pb-0 pt-6 text-center ${style.height} ${position === 1 ? "sm:col-start-2 sm:row-start-1" : position === 2 ? "sm:col-start-1 sm:row-start-1" : "sm:col-start-3 sm:row-start-1"}`} style={{ "--podium-color": style.ring, "--podium-soft": style.soft } as React.CSSProperties}>
-            <span className="absolute right-4 top-4 flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-black" style={{ color: style.ring, background: style.soft }}><PositionIcon size={14} fill="currentColor" />{style.label}</span>
-            <Avatar entry={entry} large={position === 1} />
-            <strong className="font-display mt-3 max-w-full truncate text-lg">{entry.display_name}</strong>
-            <span className="ranking-metric mt-1 text-sm font-black">{metric(entry, filter)}</span>
-            <div className={`podium-step mt-5 flex w-full flex-col items-center justify-center rounded-t-2xl text-white ${position === 1 ? "h-24" : position === 2 ? "h-20" : "h-16"}`} style={{ background: style.ring }}><span className="font-display text-3xl font-black">{position}º</span><span className="text-[10px] font-black tracking-[.16em]">LUGAR</span></div>
+          return <article key={entry.user_id} className={`podium-contender podium-place-${position}`}>
+            <div className="podium-profile">
+              <span className="podium-award" title={`${position}º lugar — ${style.label}`}><PositionIcon aria-hidden="true" /><span>{position}º</span></span>
+              <Avatar entry={entry} large={position === 1} podium />
+              <strong className="font-display mt-3 block max-w-full truncate text-lg">{entry.display_name}</strong>
+            </div>
+            <div className="podium-block">
+              <span className="podium-rank">{position}º</span>
+              <span className="podium-label">{style.label}</span>
+              <span className="podium-score"><Zap size={16} fill="currentColor" aria-hidden="true" />{metric(entry, filter)}</span>
+            </div>
           </article>;
         })}
       </section>
@@ -61,8 +67,8 @@ export function RankingBoard({ entries, currentUserId }: { entries: RankingEntry
   </>;
 }
 
-function Avatar({ entry, large = false }: { entry: RankingEntry; large?: boolean }) {
-  return <span className={`avatar shrink-0 overflow-hidden rounded-full border-4 border-white shadow-lg ${large ? "text-xl" : "text-sm"} ${entry.avatar_url ? "avatar-photo" : ""}`} style={{ width: large ? 96 : 48, height: large ? 96 : 48, ...(entry.avatar_url ? { backgroundImage: `url(${entry.avatar_url})` } : {}) }}>{entry.avatar_url ? <span className="sr-only">Foto de {entry.display_name}</span> : initials(entry.display_name)}</span>;
+function Avatar({ entry, large = false, podium = false }: { entry: RankingEntry; large?: boolean; podium?: boolean }) {
+  return <span className={`avatar shrink-0 overflow-hidden rounded-full ${podium ? "podium-avatar" : "border-4 border-white shadow-lg"} ${large ? "text-xl" : "text-sm"} ${entry.avatar_url ? "avatar-photo" : ""}`} style={{ width: large ? 96 : podium ? 78 : 48, height: large ? 96 : podium ? 78 : 48, ...(entry.avatar_url ? { backgroundImage: `url(${entry.avatar_url})` } : {}) }}>{entry.avatar_url ? <span className="sr-only">Foto de {entry.display_name}</span> : initials(entry.display_name)}</span>;
 }
 
 function linkedinUrl(handle: string) { return `https://www.linkedin.com/in/${encodeURIComponent(handle)}`; }

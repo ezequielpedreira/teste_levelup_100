@@ -18,4 +18,15 @@ describe("fluxo de confirmação do check-in", () => {
     )).rejects.toThrow("falha de gravação");
     expect(synchronize).not.toHaveBeenCalled();
   });
+
+  it("mantém o check-out confirmado quando a atualização auxiliar falha", async () => {
+    const response = { xp_earned: 30 };
+    const synchronize = vi.fn().mockRejectedValue(new Error("falha ao recarregar o painel"));
+
+    await expect(commitCheckinAndSynchronize(
+      vi.fn().mockResolvedValue(response),
+      synchronize,
+    )).resolves.toEqual(response);
+    expect(synchronize).toHaveBeenCalledOnce();
+  });
 });

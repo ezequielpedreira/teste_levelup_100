@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { redirect } from "next/navigation";
+import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
 export type Profile = {
@@ -109,6 +110,15 @@ type BaseData = {
 
 type RawRankingEntry = Omit<RankingEntry, "avatar_url">;
 
+type DataError = { code?: string; message?: string } | null;
+
+function reportRecoverableLoadError(resource: string, error: DataError) {
+  if (!error) return;
+  console.error(`[app-data] Falha recuperável ao carregar ${resource}.`, {
+    code: error.code ?? "unknown",
+  });
+}
+
 async function addRankingAvatarUrls(
   supabase: Awaited<ReturnType<typeof createClient>>,
   entries: RawRankingEntry[],
@@ -154,7 +164,10 @@ async function loadSessions() {
     .select("id,title,planned_content,planned_objective,planned_minutes,actual_content,learning_summary,goal_achieved,rating,status,started_at,finished_at,effective_duration_seconds,study_categories(name)")
     .order("started_at", { ascending: false })
     .limit(200);
-  if (result.error) throw new Error("Não foi possível carregar as sessões.");
+  if (result.error) {
+    reportRecoverableLoadError("sessões", result.error);
+    return [] as SessionWithCategory[];
+  }
   return ((result.data ?? []) as unknown as StudySession[]).map((session) => ({
     ...session,
     category: relationName(session.study_categories),
@@ -170,11 +183,15 @@ async function loadChallenge() {
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (result.error) throw new Error("Não foi possível carregar o desafio.");
+  if (result.error) {
+    reportRecoverableLoadError("desafio", result.error);
+    return null;
+  }
   return result.data as Challenge | null;
 }
 
 export const getBaseData = cache(async (): Promise<BaseData> => {
+  if (!hasSupabaseEnv) redirect("/login?config=missing");
   const supabase = await createClient();
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError || !authData.user) redirect("/login");
@@ -222,11 +239,12 @@ export const getUserStats = cache(async () => {
       .order("checkin_date", { ascending: false })
       .limit(365),
   ]);
-  if (xpResult.error || checkinsResult.error) throw new Error("Não foi possível carregar o progresso.");
+  reportRecoverableLoadError("XP", xpResult.error);
+  reportRecoverableLoadError("check-ins", checkinsResult.error);
 
-  const checkins = (checkinsResult.data ?? []) as DailyCheckin[];
+  const checkins = (checkinsResult.error ? [] : checkinsResult.data ?? []) as DailyCheckin[];
   return {
-    totalXp: (xpResult.data ?? []).reduce((sum, item) => sum + Number(item.amount), 0),
+    totalXp: (xpResult.error ? [] : xpResult.data ?? []).reduce((sum, item) => sum + Number(item.amount), 0),
     completedDays: checkins.length,
     streak: calculateStreak(checkins, base.checkinStatus.checkin_date),
     checkins,
@@ -234,14 +252,15 @@ export const getUserStats = cache(async () => {
 });
 
 export const getViewerData = cache(async () => {
-  const [base, stats] = await Promise.all([getBaseData(), getUserStats()]);
+  const base = await getBaseData();
+  const stats = await getUserStats();
   return { ...base, stats };
 });
 
 export const getDashboardData = cache(async () => {
+  const base = await getBaseData();
   const supabase = await createClient();
-  const [base, userStats, challenge, progressResult, rankingResult] = await Promise.all([
-    getBaseData(),
+  const [userStats, challenge, progressResult, rankingResult] = await Promise.all([
     getUserStats(),
     loadChallenge(),
     supabase
@@ -251,10 +270,13 @@ export const getDashboardData = cache(async () => {
       .limit(365),
     supabase.rpc("get_ranking", { p_limit: 100 }),
   ]);
-  if (progressResult.error || rankingResult.error) throw new Error("Não foi possível carregar o painel.");
+  reportRecoverableLoadError("progresso diário", progressResult.error);
+  reportRecoverableLoadError("ranking do painel", rankingResult.error);
 
-  const progress = (progressResult.data ?? []) as DailyProgress[];
-  const ranking = await addRankingAvatarUrls(supabase, (rankingResult.data ?? []) as RawRankingEntry[]);
+  const progress = (progressResult.error ? [] : progressResult.data ?? []) as DailyProgress[];
+  const ranking = rankingResult.error
+    ? []
+    : await addRankingAvatarUrls(supabase, (rankingResult.data ?? []) as RawRankingEntry[]);
   const currentRanking = ranking.find((entry) => entry.user_id === base.user.id);
   const todayProgress = progress.find((item) => item.study_date === base.checkinStatus.checkin_date);
 
@@ -273,8 +295,8 @@ export const getDashboardData = cache(async () => {
 });
 
 export const getJourneyData = cache(async () => {
-  const [base, stats, challenge, sessions] = await Promise.all([
-    getBaseData(),
+  const base = await getBaseData();
+  const [stats, challenge, sessions] = await Promise.all([
     getUserStats(),
     loadChallenge(),
     loadSessions(),
@@ -283,30 +305,32 @@ export const getJourneyData = cache(async () => {
 });
 
 export const getSessionsData = cache(async () => {
-  const [base, sessions] = await Promise.all([getBaseData(), loadSessions()]);
+  const base = await getBaseData();
+  const sessions = await loadSessions();
   return { ...base, sessions };
 });
 
 export const getRankingData = cache(async () => {
+  const base = await getBaseData();
   const supabase = await createClient();
-  const [base, rankingResult] = await Promise.all([
-    getBaseData(),
-    supabase.rpc("get_ranking", { p_limit: 100 }),
-  ]);
-  if (rankingResult.error) throw new Error("Não foi possível carregar o ranking.");
-  const ranking = await addRankingAvatarUrls(supabase, (rankingResult.data ?? []) as RawRankingEntry[]);
+  const rankingResult = await supabase.rpc("get_ranking", { p_limit: 100 });
+  reportRecoverableLoadError("ranking", rankingResult.error);
+  const ranking = rankingResult.error
+    ? []
+    : await addRankingAvatarUrls(supabase, (rankingResult.data ?? []) as RawRankingEntry[]);
   return { ...base, ranking };
 });
 
 export const getAchievementsData = cache(async () => {
+  const base = await getBaseData();
   const supabase = await createClient();
-  const [base, achievementsResult] = await Promise.all([
-    getBaseData(),
-    supabase
-      .from("achievements")
-      .select("id,slug,name,description,icon,condition_type,condition_value,user_achievements(unlocked_at)")
-      .order("condition_value"),
-  ]);
-  if (achievementsResult.error) throw new Error("Não foi possível carregar as conquistas.");
-  return { ...base, achievements: (achievementsResult.data ?? []) as unknown as Achievement[] };
+  const achievementsResult = await supabase
+    .from("achievements")
+    .select("id,slug,name,description,icon,condition_type,condition_value,user_achievements(unlocked_at)")
+    .order("condition_value");
+  reportRecoverableLoadError("conquistas", achievementsResult.error);
+  return {
+    ...base,
+    achievements: (achievementsResult.error ? [] : achievementsResult.data ?? []) as unknown as Achievement[],
+  };
 });
